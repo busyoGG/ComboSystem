@@ -1,11 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum SkillType {
-    Click,
-    Hold,
-    Charge
-}
 
 public class SkillTree
 {

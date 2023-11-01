@@ -24,6 +24,16 @@ public enum ComboState
     Wrong
 }
 
+/// <summary>
+/// 技能类型
+/// </summary>
+public enum SkillType
+{
+    Click,
+    Hold,
+    Charge
+}
+
 public class ComboManager
 {
     private static ComboManager _instance = null;
