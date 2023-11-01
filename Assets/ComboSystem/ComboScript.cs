@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEditor.Experimental.GraphView;
@@ -6,26 +7,6 @@ using UnityEngine.UI;
 
 public class ComboScript : MonoBehaviour
 {
-    /// <summary>
-    /// 连招状态枚举 空闲|执行中|等待
-    /// </summary>
-    private enum State
-    {
-        Idle,
-        Running,
-        Holding,
-        Charging,
-        Waiting
-    }
-    /// <summary>
-    /// 连招检测状态枚举 成功|失败|错误
-    /// </summary>
-    private enum ComboState
-    {
-        Success,
-        Fail,
-        Wrong
-    }
     /// <summary>
     /// 连招状态
     /// </summary>
@@ -71,6 +52,15 @@ public class ComboScript : MonoBehaviour
 
     private Coroutine _skillCo;
 
+    private Action _onIdle;
+
+    private Action _onRunning;
+
+    private Action _onHolding;
+
+    private Action _onCharging;
+
+    private Action _onWaiting;
 
     void Start()
     {
@@ -82,73 +72,8 @@ public class ComboScript : MonoBehaviour
         _runProgress = GameObject.FindGameObjectWithTag("Finish").GetComponent<RectTransform>();
         _runProgress.sizeDelta = new Vector2(0, 30);
         _runImage = GameObject.FindGameObjectWithTag("Finish").GetComponent<Image>();
-        //实例化技能链
-        //技能A
-        SkillTree skillA1 = new SkillTree();
-        skillA1.key = KeyCode.A;
-        skillA1.name = "连招A1";
-        skillA1.id = 1;
-        skillA1.outOfTime = 0.5f;
-        skillA1.skillTime = 0.5f;
-        skillA1.progressColor = Color.red;
 
-        SkillTree skillA2 = new SkillTree();
-        skillA2.key = KeyCode.A;
-        skillA2.name = "连招A2";
-        skillA2.id = 1;
-        skillA2.outOfTime = 0.5f;
-        skillA2.skillTime = 2f;
-        skillA2.progressColor = new Color(0.8f, 0, 0, 1);
-        skillA2.skillType = SkillType.Hold;
-        skillA2.holdingTime = 2;
-
-        SkillTree skillA3 = new SkillTree();
-        skillA3.key = KeyCode.A;
-        skillA3.name = "连招A3-1";
-        skillA3.id = 1;
-        skillA3.outOfTime = 0.5f;
-        skillA3.skillTime = 0.5f;
-        skillA3.progressColor = new Color(0.6f, 0, 0, 1);
-
-        SkillTree skillA4 = new SkillTree();
-        skillA4.key = KeyCode.S;
-        skillA4.name = "连招A3-2";
-        skillA4.id = 1;
-        skillA4.outOfTime = 0.5f;
-        skillA4.skillTime = 0.5f;
-        skillA4.progressColor = new Color(0.4f, 0, 0, 1);
-        skillA4.skillType = SkillType.Charge;
-        skillA4.holdingTime = 2;
-
-        skillA1.next.Add(skillA2);
-        skillA2.next.Add(skillA3);
-        skillA2.next.Add(skillA4);
-
-        _skills.Add(skillA1);
-
-        //技能B
-        SkillTree skillB1 = new SkillTree();
-        skillB1.key = KeyCode.B;
-        skillB1.name = "连招B1";
-        skillB1.id = 2;
-        skillB1.outOfTime = 0.5f;
-        skillB1.skillTime = 0.5f;
-        skillB1.isCanForceStop = true;
-        skillB1.forceTimes = 1;
-        skillB1.defaultForceTimes = 1;
-        skillB1.forceResetTime = 5;
-        skillB1.progressColor = Color.green;
-
-        SkillTree skillB2 = new SkillTree();
-        skillB2.key = KeyCode.B;
-        skillB2.name = "连招B2";
-        skillB2.id = 2;
-        skillB2.outOfTime = 0.5f;
-        skillB2.skillTime = 10f;
-        skillB2.progressColor = new Color(0, 0.8f, 0, 1);
-
-        skillB1.next.Add(skillB2);
-        _skills.Add(skillB1);
+        DoChangeState(State.Idle);
     }
 
     // Update is called once per frame
@@ -351,23 +276,38 @@ public class ComboScript : MonoBehaviour
         {
             case State.Idle:
                 //RunIdle
-                Debug.Log("执行 Idle");
+                if (_onIdle != null)
+                {
+                    _onIdle();
+                }
                 break;
             case State.Running:
                 //RunSkill
-                Debug.Log("执行 Running");
+                if (_onRunning != null)
+                {
+                    _onRunning();
+                }
                 break;
             case State.Holding:
                 //HoldingSkill
-                Debug.Log("执行 Holding");
+                if (_onHolding != null)
+                {
+                    _onHolding();
+                }
                 break;
             case State.Charging:
                 //HoldingSkill
-                Debug.Log("执行 Charging");
+                if (_onCharging != null)
+                {
+                    _onCharging();
+                }
                 break;
             case State.Waiting:
                 //RunWaiting
-                Debug.Log("执行 Waiting");
+                if (_onWaiting != null)
+                {
+                    _onWaiting();
+                }
                 break;
         }
     }
@@ -485,5 +425,48 @@ public class ComboScript : MonoBehaviour
         obj.forceTimes = obj.defaultForceTimes;
         _forceReset[obj.id] = false;
         Debug.Log("重置强制打断次数");
+    }
+
+    /// <summary>
+    /// 添加技能
+    /// </summary>
+    /// <param name="skill"></param>
+    public void AddSkill(SkillTree skill)
+    {
+        _skills.Add(skill);
+    }
+
+    /// <summary>
+    /// 获取当前技能
+    /// </summary>
+    /// <returns></returns>
+    public SkillTree GetCurSkill()
+    {
+        return _curSkill;
+    }
+
+    public void OnIdle(Action callback)
+    {
+        _onIdle = callback;
+    }
+
+    public void OnRunning(Action callback)
+    {
+        _onRunning = callback;
+    }
+
+    public void OnHolding(Action callback)
+    {
+        _onHolding = callback;
+    }
+
+    public void OnCharging(Action callback)
+    {
+        _onCharging = callback;
+    }
+
+    public void OnWaiting(Action callback)
+    {
+        _onWaiting = callback;
     }
 }
