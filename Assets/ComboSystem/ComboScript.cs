@@ -329,78 +329,76 @@ public class ComboScript : MonoBehaviour
     /// <returns></returns>
     private ComboState CheckSkillKey(bool isRoot)
     {
-        if (Input.anyKey)
+        if (isRoot)
         {
-            if (isRoot)
+            if (_curSkill != null)
             {
-                if (_curSkill != null)
+                //存在最近技能，并且从技能起手式开始检测 该情况为打断检测
+                for (int i = 0, len = _skills.Count; i < len; i++)
                 {
-                    //存在最近技能，并且从技能起手式开始检测 该情况为打断检测
-                    for (int i = 0, len = _skills.Count; i < len; i++)
+                    SkillTree skill = _skills[i];
+                    if (skill.isCanForceStop && skill.forceTimes > 0 && Input.GetKeyDown(skill.key))
                     {
-                        SkillTree skill = _skills[i];
-                        if (skill.isCanForceStop && skill.forceTimes > 0 && Input.GetKeyDown(skill.key))
+                        Debug.Log("打断并强制开始连招" + skill.key);
+
+                        StopCoroutine(_skillCo);
+
+                        if (skill.name != _curSkill.name)
                         {
-                            Debug.Log("打断并强制开始连招" + skill.key);
-
-                            StopCoroutine(_skillCo);
-
-                            if (skill.name != _curSkill.name)
-                            {
-                                _curSkill.isRunSkill = false;
-                                //_curSkill.forceTimes = _curSkill.defaultForceTimes;
-                            }
-                            _curSkill = skill;
-                            --_curSkill.forceTimes;
-
-                            bool reset;
-                            _forceReset.TryGetValue(_curSkill.id, out reset);
-                            if (!reset)
-                            {
-                                StartCoroutine(WaitForForceTimesReset(_curSkill));
-                            }
-
-                            return ComboState.Success;
+                            _curSkill.isRunSkill = false;
+                            //_curSkill.forceTimes = _curSkill.defaultForceTimes;
                         }
-                    }
-                }
-                else
-                {
-                    //查找连招起手式
-                    for (int i = 0, len = _skills.Count; i < len; i++)
-                    {
-                        SkillTree skill = _skills[i];
-                        if (Input.GetKeyDown(skill.key))
+                        _curSkill = skill;
+                        --_curSkill.forceTimes;
+
+                        bool reset;
+                        _forceReset.TryGetValue(_curSkill.id, out reset);
+                        if (!reset)
                         {
-                            Debug.Log("开始连招" + skill.key);
-                            _curSkill = skill;
-                            return ComboState.Success;
+                            StartCoroutine(WaitForForceTimesReset(_curSkill));
                         }
+
+                        return ComboState.Success;
                     }
                 }
             }
             else
             {
-                //检测连招分支
-                if (Input.anyKeyDown)
+                //查找连招起手式
+                for (int i = 0, len = _skills.Count; i < len; i++)
                 {
-                    for (int i = 0, len = _curSkill.next.Count; i < len; i++)
+                    SkillTree skill = _skills[i];
+                    if (Input.GetKeyDown(skill.key))
                     {
-                        SkillTree skill = _curSkill.next[i];
-                        if (Input.GetKeyDown(skill.key))
-                        {
-                            //连招成功
-                            _curSkill = _curSkill.next[i];
-                            return ComboState.Success;
-                        }
+                        Debug.Log("开始连招" + skill.key);
+                        _curSkill = skill;
+                        return ComboState.Success;
                     }
-
-                    //连错招 重置
-                    Debug.Log("连招重置");
-                    return ComboState.Wrong;
                 }
             }
         }
+        else
+        {
+            //检测连招分支
+            if (Input.anyKeyDown)
+            {
+                for (int i = 0, len = _curSkill.next.Count; i < len; i++)
+                {
+                    SkillTree skill = _curSkill.next[i];
+                    if (Input.GetKeyDown(skill.key))
+                    {
+                        //连招成功
+                        _curSkill = _curSkill.next[i];
+                        return ComboState.Success;
+                    }
+                }
+
+                //连错招 重置
+                Debug.Log("连招重置");
+                return ComboState.Wrong;
+            }
+        }
+
         return ComboState.Fail;
     }
 
